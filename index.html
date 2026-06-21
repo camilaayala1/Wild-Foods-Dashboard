@@ -314,22 +314,33 @@ function render(){
   const edadProm = cntEdad > 0 ? (sumEdad/cntEdad).toFixed(1) : '—';
   const antProm  = cntEdad > 0 ? (sumAnt/cntEdad).toFixed(1)  : '—';
 
-  // Aplicar filtro empresa sobre totales
-  if(emp === 'Wild Foods Factory Spa'){
-    totHC = 3; totF = 2; totM = 1; totIndef = 3; totPlazo = 0;
+  // Determinar índice de período seleccionado
+  const perIdx = D.periodos.indexOf(per); // -1 si 'all'
+  const empKey = emp==='Wild Foods SPA' ? 'wf' : emp==='Wild Foods Factory Spa' ? 'wff' : 'all';
+
+  // Si hay filtro CECO, usar datos calculados; si no, usar datos reales por período
+  let fShow, mShow, indShow, plazoShow, edadKPI, antKPI;
+  if(cecoFiltered){
+    fShow    = gen==='Masculino' ? 0 : totF;
+    mShow    = gen==='Femenino'  ? 0 : totM;
+    indShow  = cont==='Plazo fijo'  ? 0 : totIndef;
+    plazoShow= cont==='Indefinido'  ? 0 : totPlazo;
+    edadKPI  = edadProm;
+    antKPI   = antProm;
+  } else {
+    const pd = D.perPeriod[empKey];
+    const idx = perIdx >= 0 ? perIdx : 4; // default mayo
+    fShow    = gen==='Masculino' ? 0 : pd.F[idx];
+    mShow    = gen==='Femenino'  ? 0 : pd.M[idx];
+    indShow  = cont==='Plazo fijo'  ? 0 : pd.indef[idx];
+    plazoShow= cont==='Indefinido'  ? 0 : pd.plazo[idx];
+    edadKPI  = pd.edad[idx];
+    antKPI   = pd.ant[idx];
   }
-
-  // Aplicar filtro género
-  const fShow = gen==='Masculino' ? 0 : totF;
-  const mShow = gen==='Femenino'  ? 0 : totM;
-
-  // Aplicar filtro contrato
-  const indShow   = cont==='Plazo fijo'  ? 0 : totIndef;
-  const plazoShow = cont==='Indefinido'  ? 0 : totPlazo;
 
   // KPIs
   const hcKPI = per !== 'all'
-    ? (cecoFiltered ? hcMesArr[['2026-01','2026-02','2026-03','2026-04','2026-05'].indexOf(per)] : D.hc[emp==='Wild Foods SPA'?'wf':emp==='Wild Foods Factory Spa'?'wff':'all'][per])
+    ? (cecoFiltered ? hcMesArr[perIdx] : D.hc[empKey][per])
     : totHC;
 
   document.getElementById('kv-hc').textContent = hcKPI;
@@ -342,8 +353,8 @@ function render(){
   const pctI = (indShow+plazoShow)>0 ? Math.round(indShow/(indShow+plazoShow)*100) : 0;
   document.getElementById('kv-indef').textContent = pctI+'%';
   document.getElementById('ks-indef').textContent = indShow+' de '+(indShow+plazoShow);
-  document.getElementById('kv-edad').textContent = edadProm;
-  document.getElementById('kv-ant').textContent = antProm;
+  document.getElementById('kv-edad').textContent = edadKPI;
+  document.getElementById('kv-ant').textContent = antKPI;
 
   // Headcount mensual
   const labels5 = ['Ene','Feb','Mar','Abr','May'];
